@@ -1,0 +1,810 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import { useEffect, useState, useMemo } from "react";
+     4→     4→import { motion, AnimatePresence } from "framer-motion";
+     5→     5→import { toast } from "sonner";
+     6→     6→import {
+     7→     7→  Search, MapPin, Clock, Wallet, User, Car, CarFront, Truck, Crown, Bus, Bike,
+     8→     8→  Star, ChevronRight, Home, Briefcase, Plus, Navigation, X,
+     9→     9→  CircleDot, ChevronDown, ArrowRightLeft,
+    10→    10→} from "lucide-react";
+    11→    11→import { useAppStore, type CustomerView, type VehicleType, type NearbyDriver } from "@/store/app-store";
+    12→    12→import { Input } from "@/components/ui/input";
+    13→    13→
+    14→    14→type SearchField = "pickup" | "destination";
+    15→    15→
+    16→    16→const VEHICLE_TYPES: {
+    17→    17→  type: VehicleType; label: string; icon: React.ElementType; baseFare: number; perKm: number; eta: string;
+    18→    18→}[] = [
+    19→    19→  { type: "hatchback", label: "Hatchback", icon: Car, baseFare: 80, perKm: 12, eta: "3 min" },
+    20→    20→  { type: "sedan", label: "Sedan", icon: CarFront, baseFare: 100, perKm: 14, eta: "4 min" },
+    21→    21→  { type: "suv", label: "SUV", icon: Truck, baseFare: 150, perKm: 18, eta: "6 min" },
+    22→    22→  { type: "luxury", label: "Luxury", icon: Crown, baseFare: 250, perKm: 28, eta: "8 min" },
+    23→    23→  { type: "mini_van", label: "Mini Van", icon: Bus, baseFare: 180, perKm: 20, eta: "7 min" },
+    24→    24→  { type: "auto", label: "Auto", icon: Bike, baseFare: 50, perKm: 10, eta: "2 min" },
+    25→    25→  { type: "bike", label: "Bike", icon: Bike, baseFare: 40, perKm: 8, eta: "1 min" },
+    26→    26→];
+    27→    27→
+    28→    28→const POPULAR_PLACES = [
+    29→    29→  "Payyoli Town Centre",
+    30→    30→  "Payyoli Beach",
+    31→    31→  "Payyoli Railway Station",
+    32→    32→  "Vadakara Bus Stand",
+    33→    33→  "Iringal Junction",
+    34→    34→  "Thikkodi Market",
+    35→    35→  "Keezhariyur Temple",
+    36→    36→  "Muttil Junction",
+    37→    37→  "Orkkatteri Square",
+    38→    38→  "Chorode Bridge",
+    39→    39→  "Nanminda Junction",
+    40→    40→  "Ayyankara Hills Viewpoint",
+    41→    41→  "Payyoli Govt. Hospital",
+    42→    42→  "Vadakara New Bus Stand",
+    43→    43→  "Chamravattam Beach",
+    44→    44→];
+    45→    45→
+    46→    46→const DRIVER_POSITIONS = [
+    47→    47→  { top: "20%", left: "25%" },
+    48→    48→  { top: "15%", left: "70%" },
+    49→    49→  { top: "35%", left: "60%" },
+    50→    50→  { top: "45%", left: "15%" },
+    51→    51→  { top: "25%", left: "45%" },
+    52→    52→  { top: "50%", left: "75%" },
+    53→    53→];
+    54→    54→
+    55→    55→export default function CustomerHome() {
+    56→    56→  const {
+    57→    57→    customerView, setCustomerView, currentLocation, pickup, destination,
+    58→    58→    setPickup, setDestination, selectedVehicleType, setSelectedVehicleType,
+    59→    59→    nearbyDrivers, setNearbyDrivers, activeRide, setActiveRide, walletBalance,
+    60→    60→    showSearchSheet, setShowSearchSheet, showVehicleSheet, setShowVehicleSheet,
+    61→    61→    isSearchingDriver, setIsSearchingDriver, userName, userPhone, unreadCount,
+    62→    62→  } = useAppStore();
+    63→    63→
+    64→    64→  const [searchQuery, setSearchQuery] = useState("");
+    65→    65→  const [promoCode, setPromoCode] = useState("");
+    66→    66→  const [selectedDriver, setSelectedDriver] = useState<NearbyDriver | null>(null);
+    67→    67→  const [activeSearchField, setActiveSearchField] = useState<SearchField>("destination");
+    68→    68→
+    69→    69→  // Pickup suggestions — nearby areas around Payyoli within 10km
+    70→    70→  const PICKUP_LOCATIONS = useMemo(() => [
+    71→    71→    currentLocation.address,
+    72→    72→    "Payyoli Town Centre, Payyoli",
+    73→    73→    "Payyoli Bus Stand, Payyoli",
+    74→    74→    "Payyoli Railway Station, Payyoli",
+    75→    75→    "Near Payyoli Beach, Payyoli",
+    76→    76→    "Iringal Junction, Iringal",
+    77→    77→    "Thikkodi Market, Thikkodi",
+    78→    78→    "Keezhariyur Temple Road, Keezhariyur",
+    79→    79→    "Muttil Junction, Payyoli",
+    80→    80→    "Orkkatteri Square, Orkkatteri",
+    81→    81→    "Chorode Bridge, Chorode",
+    82→    82→    "Nanminda Junction, Payyoli",
+    83→    83→    "Payyoli Govt. Hospital, Payyoli",
+    84→    84→    "Meladi Road, Payyoli",
+    85→    85→    "Atholi Junction, Atholi",
+    86→    86→    "Vatakara Road, Payyoli",
+    87→    87→    "Koyilandy Road Junction, Payyoli",
+    88→    88→  ], [currentLocation.address]);
+    89→    89→
+    90→    90→  useEffect(() => {
+    91→    91→    fetch("/api/rides?type=nearby-drivers")
+    92→    92→      .then((r) => r.json())
+    93→    93→      .then((data) => setNearbyDrivers(data))
+    94→    94→      .catch(() => {});
+    95→    95→  }, [setNearbyDrivers]);
+    96→    96→
+    97→    97→  const estimatedFare = useMemo(() => {
+    98→    98→    if (!pickup || !destination) return 0;
+    99→    99→    const dist = 5.2; // simulated distance in km (Payyoli area)
+   100→   100→    const vt = VEHICLE_TYPES.find((v) => v.type === selectedVehicleType);
+   101→   101→    return vt ? Math.round(vt.baseFare + vt.perKm * dist) : 0;
+   102→   102→  }, [pickup, destination, selectedVehicleType]);
+   103→   103→
+   104→   104→  const top3Drivers = useMemo(() => nearbyDrivers.slice(0, 3), [nearbyDrivers]);
+   105→   105→
+   106→   106→  const handleSelectDestination = (place: string) => {
+   107→   107→    setDestination({
+   108→   108→      lat: 11.5064 + (Math.random() - 0.5) * 0.08,
+   109→   109→      lng: 75.7797 + (Math.random() - 0.5) * 0.08,
+   110→   110→      address: place,
+   111→   111→    });
+   112→   112→    if (!pickup) {
+   113→   113→      setPickup(currentLocation);
+   114→   114→    }
+   115→   115→    setShowSearchSheet(false);
+   116→   116→    setShowVehicleSheet(true);
+   117→   117→  };
+   118→   118→
+   119→   119→  const handleSelectPickup = (place: string) => {
+   120→   120→    setPickup({
+   121→   121→      lat: 11.5064 + (Math.random() - 0.5) * 0.05,
+   122→   122→      lng: 75.7797 + (Math.random() - 0.5) * 0.05,
+   123→   123→      address: place,
+   124→   124→    });
+   125→   125→    setShowSearchSheet(false);
+   126→   126→  };
+   127→   127→
+   128→   128→  const openSearchSheet = (field: SearchField) => {
+   129→   129→    setActiveSearchField(field);
+   130→   130→    setSearchQuery("");
+   131→   131→    setShowSearchSheet(true);
+   132→   132→  };
+   133→   133→
+   134→   134→  const handleBookRide = () => {
+   135→   135→    if (!pickup || !destination) {
+   136→   136→      toast.error("Please select a destination");
+   137→   137→      return;
+   138→   138→    }
+   139→   139→    setIsSearchingDriver(true);
+   140→   140→
+   141→   141→    setTimeout(() => {
+   142→   142→      const driver = selectedDriver || nearbyDrivers[0] || {
+   143→   143→        id: "d-mock", name: "Rahul K.", avatar: "", vehicleType: "sedan" as VehicleType,
+   144→   144→        vehiclePlate: "KL-14-A-1234", rating: 4.8, lat: 11.5100, lng: 75.7830, eta: 3, fare: 85,
+   145→   145→      };
+   146→   146→      const mockRide = {
+   147→   147→        id: "ride-" + Date.now(),
+   148→   148→        status: "confirmed" as const,
+   149→   149→        driverName: driver.name,
+   150→   150→        driverAvatar: driver.avatar,
+   151→   151→        driverPhone: "+91 98765 43210",
+   152→   152→        vehicleType: selectedVehicleType,
+   153→   153→        vehiclePlate: driver.vehiclePlate,
+   154→   154→        vehicleColor: "White",
+   155→   155→        driverRating: driver.rating,
+   156→   156→        pickup,
+   157→   157→        destination,
+   158→   158→        fare: estimatedFare || driver.fare,
+   159→   159→        distance: 5.2,
+   160→   160→        duration: 14,
+   161→   161→        driverLocation: { lat: driver.lat, lng: driver.lng },
+   162→   162→        eta: driver.eta,
+   163→   163→        paymentMethod: "wallet" as const,
+   164→   164→      };
+   165→   165→      setActiveRide(mockRide);
+   166→   166→      setIsSearchingDriver(false);
+   167→   167→      setShowVehicleSheet(false);
+   168→   168→      setCustomerView("ride-tracking");
+   169→   169→      toast.success("Driver found! 🎉", { description: `${driver.name} is on the way` });
+   170→   170→    }, 3000);
+   171→   171→  };
+   172→   172→
+   173→   173→  return (
+   174→   174→    <div className="relative h-dvh w-full overflow-hidden bg-background">
+   175→   175→      {/* Map Area */}
+   176→   176→      <div className="map-container absolute inset-0 h-[60%] w-full">
+   177→   177→        <div className="map-grid" />
+   178→   178→        <div className="map-roads" />
+   179→   179→
+   180→   180→        {/* Current Location Marker */}
+   181→   181→        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+   182→   182→          <div className="pulse-ring relative h-4 w-4 rounded-full bg-ride-green shadow-glow-green" />
+   183→   183→        </div>
+   184→   184→
+   185→   185→        {/* Nearby Driver Markers */}
+   186→   186→        {nearbyDrivers.map((driver, i) => {
+   187→   187→          const pos = DRIVER_POSITIONS[i % DRIVER_POSITIONS.length];
+   188→   188→          return (
+   189→   189→            <motion.div
+   190→   190→              key={driver.id}
+   191→   191→              className="absolute z-10 text-ride-green"
+   192→   192→              style={{ top: pos.top, left: pos.left }}
+   193→   193→              initial={{ opacity: 0, scale: 0 }}
+   194→   194→              animate={{ opacity: 1, scale: 1 }}
+   195→   195→              transition={{ delay: i * 0.15, type: "spring", stiffness: 300, damping: 20 }}
+   196→   196→            >
+   197→   197→              <div className="animate-bounce-subtle">
+   198→   198→                <Car className="h-5 w-5 drop-shadow-md" />
+   199→   199→              </div>
+   200→   200→            </motion.div>
+   201→   201→          );
+   202→   202→        })}
+   203→   203→
+   204→   204→        {/* Route Line SVG */}
+   205→   205→        {pickup && destination && (
+   206→   206→          <svg className="absolute inset-0 z-[5] h-full w-full" viewBox="0 0 400 300" preserveAspectRatio="none">
+   207→   207→            <motion.path
+   208→   208→              d="M 200 280 Q 180 200 160 150 Q 140 100 180 60"
+   209→   209→              fill="none"
+   210→   210→              stroke="#00C853"
+   211→   211→              strokeWidth="3"
+   212→   212→              strokeDasharray="8 6"
+   213→   213→              initial={{ pathLength: 0, opacity: 0 }}
+   214→   214→              animate={{ pathLength: 1, opacity: 0.8 }}
+   215→   215→              transition={{ duration: 1.5, ease: "easeInOut" }}
+   216→   216→            />
+   217→   217→          </svg>
+   218→   218→        )}
+   219→   219→
+   220→   220→        {/* Current Location Address Card */}
+   221→   221→        <motion.div
+   222→   222→          className="absolute top-4 left-1/2 z-30 -translate-x-1/2"
+   223→   223→          initial={{ y: -30, opacity: 0 }}
+   224→   224→          animate={{ y: 0, opacity: 1 }}
+   225→   225→          transition={{ delay: 0.3, type: "spring", stiffness: 260, damping: 22 }}
+   226→   226→        >
+   227→   227→          <div className="glass-strong shadow-premium flex items-center gap-2 rounded-2xl px-4 py-2.5">
+   228→   228→            <div className="relative h-2.5 w-2.5">
+   229→   229→              <div className="absolute inset-0 rounded-full bg-ride-green" />
+   230→   230→              <div className="absolute inset-0 rounded-full bg-ride-green animate-ping opacity-40" />
+   231→   231→            </div>
+   232→   232→            <span className="max-w-[220px] truncate text-sm font-medium text-foreground">
+   233→   233→              {currentLocation.address}
+   234→   234→            </span>
+   235→   235→          </div>
+   236→   236→        </motion.div>
+   237→   237→      </div>
+   238→   238→
+   239→   239→      {/* Two-Field Search Card (overlaid on map bottom) */}
+   240→   240→      <motion.div
+   241→   241→        className="absolute top-[53%] left-0 right-0 z-30 px-4"
+   242→   242→        initial={{ y: 40, opacity: 0 }}
+   243→   243→        animate={{ y: 0, opacity: 1 }}
+   244→   244→        transition={{ delay: 0.4, type: "spring", stiffness: 260, damping: 22 }}
+   245→   245→      >
+   246→   246→        <div className="glass-strong shadow-premium rounded-2xl overflow-hidden">
+   247→   247→          {/* Route Header Bar */}
+   248→   248→          <div className="flex items-center justify-between px-4 pt-3 pb-1">
+   249→   249→            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+   250→   250→              Plan your ride
+   251→   251→            </span>
+   252→   252→            {/* Swap pickup & destination */}
+   253→   253→            <motion.button
+   254→   254→              className="flex h-7 w-7 items-center justify-center rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors"
+   255→   255→              whileTap={{ scale: 0.85, rotate: 180 }}
+   256→   256→              onClick={() => {
+   257→   257→                if (pickup && destination) {
+   258→   258→                  const tmp = pickup;
+   259→   259→                  setPickup(destination);
+   260→   260→                  setDestination(tmp);
+   261→   261→                  toast.success("Route swapped");
+   262→   262→                }
+   263→   263→              }}
+   264→   264→            >
+   265→   265→              <ArrowRightLeft className="h-3.5 w-3.5 text-muted-foreground" />
+   266→   266→            </motion.button>
+   267→   267→          </div>
+   268→   268→
+   269→   269→          {/* Fields */}
+   270→   270→          <div className="relative px-3 pb-3">
+   271→   271→            {/* Dotted line connecting the two dots */}
+   272→   272→            <div className="absolute left-[23px] top-[46px] bottom-[46px] w-[2px]">
+   273→   273→              <div className="h-full w-full" style={{
+   274→   274→                backgroundImage: "repeating-linear-gradient(to bottom, var(--color-ride-green) 0px, var(--color-ride-green) 3px, transparent 3px, transparent 7px)",
+   275→   275→                opacity: 0.4,
+   276→   276→              }} />
+   277→   277→            </div>
+   278→   278→
+   279→   279→            {/* Pickup Field */}
+   280→   280→            <div
+   281→   281→              className="relative flex items-center gap-3 rounded-xl px-2 py-2.5 cursor-pointer hover:bg-foreground/[0.03] transition-colors"
+   282→   282→              onClick={() => openSearchSheet("pickup")}
+   283→   283→            >
+   284→   284→              <div className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center">
+   285→   285→                <CircleDot className="h-4 w-4 text-ride-green" />
+   286→   286→              </div>
+   287→   287→              <div className="flex-1 min-w-0">
+   288→   288→                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground leading-none mb-0.5">
+   289→   289→                  Your Location
+   290→   290→                </p>
+   291→   291→                <p className={`text-sm truncate ${pickup ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+   292→   292→                  {pickup ? pickup.address : currentLocation.address}
+   293→   293→                </p>
+   294→   294→              </div>
+   295→   295→              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground/5">
+   296→   296→                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+   297→   297→              </div>
+   298→   298→            </div>
+   299→   299→
+   300→   300→            {/* Destination Field */}
+   301→   301→            <div
+   302→   302→              className="relative flex items-center gap-3 rounded-xl px-2 py-2.5 cursor-pointer hover:bg-foreground/[0.03] transition-colors"
+   303→   303→              onClick={() => openSearchSheet("destination")}
+   304→   304→            >
+   305→   305→              <div className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center">
+   306→   306→                <MapPin className="h-4 w-4 text-ride-green" />
+   307→   307→              </div>
+   308→   308→              <div className="flex-1 min-w-0">
+   309→   309→                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground leading-none mb-0.5">
+   310→   310→                  Choose Destination
+   311→   311→                </p>
+   312→   312→                <p className={`text-sm truncate ${destination ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+   313→   313→                  {destination ? destination.address : "Where are you going?"}
+   314→   314→                </p>
+   315→   315→              </div>
+   316→   316→              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground/5">
+   317→   317→                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+   318→   318→              </div>
+   319→   319→            </div>
+   320→   320→          </div>
+   321→   321→
+   322→   322→          {/* Quick Actions Row */}
+   323→   323→          {pickup && destination && (
+   324→   324→            <motion.div
+   325→   325→              className="border-t border-foreground/5 px-4 py-2.5"
+   326→   326→              initial={{ opacity: 0, height: 0 }}
+   327→   327→              animate={{ opacity: 1, height: "auto" }}
+   328→   328→            >
+   329→   329→              <button
+   330→   330→                className="btn-premium gradient-primary w-full rounded-xl py-2.5 text-sm font-bold text-white shadow-glow-green-strong flex items-center justify-center gap-2"
+   331→   331→                onClick={() => setShowVehicleSheet(true)}
+   332→   332→              >
+   333→   333→                <Navigation className="h-4 w-4" />
+   334→   334→                Choose Vehicle — ₹{estimatedFare || "—"}
+   335→   335→              </button>
+   336→   336→            </motion.div>
+   337→   337→          )}
+   338→   338→
+   339→   339→          {/* Quick Access Row (visible when no destination is set) */}
+   340→   340→          {!destination && (
+   341→   341→            <motion.div
+   342→   342→              className="border-t border-foreground/5 px-4 py-2.5 flex items-center gap-2 overflow-x-auto scrollbar-hide"
+   343→   343→              initial={{ opacity: 0 }}
+   344→   344→              animate={{ opacity: 1 }}
+   345→   345→            >
+   346→   346→              <motion.button
+   347→   347→                className="flex shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.04] px-3 py-1.5 text-xs font-medium text-foreground hover:bg-foreground/[0.08] transition-colors"
+   348→   348→                whileTap={{ scale: 0.95 }}
+   349→   349→                onClick={() => handleSelectDestination("Payyoli Town Centre")}
+   350→   350→              >
+   351→   351→                <MapPin className="h-3 w-3 text-ride-green" />
+   352→   352→                Town Centre
+   353→   353→              </motion.button>
+   354→   354→              <motion.button
+   355→   355→                className="flex shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.04] px-3 py-1.5 text-xs font-medium text-foreground hover:bg-foreground/[0.08] transition-colors"
+   356→   356→                whileTap={{ scale: 0.95 }}
+   357→   357→                onClick={() => handleSelectDestination("Vadakara Bus Stand, Vadakara")}
+   358→   358→              >
+   359→   359→                <MapPin className="h-3 w-3 text-ride-green" />
+   360→   360→                Vadakara
+   361→   361→              </motion.button>
+   362→   362→              <motion.button
+   363→   363→                className="flex shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.04] px-3 py-1.5 text-xs font-medium text-foreground hover:bg-foreground/[0.08] transition-colors"
+   364→   364→                whileTap={{ scale: 0.95 }}
+   365→   365→                onClick={() => handleSelectDestination("Payyoli Beach")}
+   366→   366→              >
+   367→   367→                <MapPin className="h-3 w-3 text-ride-green" />
+   368→   368→                Beach
+   369→   369→              </motion.button>
+   370→   370→              <motion.button
+   371→   371→                className="flex shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.04] px-3 py-1.5 text-xs font-medium text-foreground hover:bg-foreground/[0.08] transition-colors"
+   372→   372→                whileTap={{ scale: 0.95 }}
+   373→   373→                onClick={() => handleSelectDestination("Payyoli Railway Station, Payyoli")}
+   374→   374→              >
+   375→   375→                <MapPin className="h-3 w-3 text-ride-green" />
+   376→   376→                Railway Stn
+   377→   377→              </motion.button>
+   378→   378→              <motion.button
+   379→   379→                className="flex shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.04] px-3 py-1.5 text-xs font-medium text-foreground hover:bg-foreground/[0.08] transition-colors"
+   380→   380→                whileTap={{ scale: 0.95 }}
+   381→   381→                onClick={() => handleSelectDestination("Keezhariyur Temple")}
+   382→   382→              >
+   383→   383→                <MapPin className="h-3 w-3 text-ride-green" />
+   384→   384→                Temple
+   385→   385→              </motion.button>
+   386→   386→            </motion.div>
+   387→   387→          )}
+   388→   388→        </div>
+   389→   389→      </motion.div>
+   390→   390→
+   391→   391→      {/* Bottom Sheet: Vehicle Selection */}
+   392→   392→      <AnimatePresence>
+   393→   393→        {showVehicleSheet && pickup && destination && (
+   394→   394→          <motion.div
+   395→   395→            className="absolute bottom-16 left-0 right-0 z-40 px-4"
+   396→   396→            initial={{ y: 500 }}
+   397→   397→            animate={{ y: 0 }}
+   398→   398→            exit={{ y: 500 }}
+   399→   399→            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+   400→   400→          >
+   401→   401→            <div className="glass-strong shadow-float max-h-[42vh] overflow-y-auto scrollbar-thin rounded-t-3xl rounded-b-2xl p-4">
+   402→   402→              {/* Handle */}
+   403→   403→              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-foreground/15" />
+   404→   404→
+   405→   405→              {/* Route Info */}
+   406→   406→              <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
+   407→   407→                <MapPin className="h-3.5 w-3.5 text-ride-green" />
+   408→   408→                <span className="truncate max-w-[140px]">{pickup.address}</span>
+   409→   409→                <Navigation className="h-3 w-3" />
+   410→   410→                <span className="truncate max-w-[140px]">{destination.address}</span>
+   411→   411→              </div>
+   412→   412→
+   413→   413→              {/* Vehicle Types */}
+   414→   414→              <div className="mb-4">
+   415→   415→                <h3 className="mb-2.5 text-sm font-semibold text-foreground">Choose Vehicle</h3>
+   416→   416→                <div className="flex gap-2.5 overflow-x-auto scrollbar-hide pb-1">
+   417→   417→                  {VEHICLE_TYPES.map((vt) => {
+   418→   418→                    const Icon = vt.icon;
+   419→   419→                    const isSelected = selectedVehicleType === vt.type;
+   420→   420→                    const fare = Math.round(vt.baseFare + vt.perKm * 5.2);
+   421→   421→                    return (
+   422→   422→                      <motion.button
+   423→   423→                        key={vt.type}
+   424→   424→                        className={`flex shrink-0 flex-col items-center gap-1.5 rounded-2xl p-3 transition-premium min-w-[90px] ${
+   425→   425→                          isSelected
+   426→   426→                            ? "bg-ride-green/10 border-2 border-ride-green shadow-glow-green"
+   427→   427→                            : "bg-foreground/5 border-2 border-transparent"
+   428→   428→                        }`}
+   429→   429→                        onClick={() => setSelectedVehicleType(vt.type)}
+   430→   430→                        whileTap={{ scale: 0.95 }}
+   431→   431→                      >
+   432→   432→                        <Icon className={`h-5 w-5 ${isSelected ? "text-ride-green" : "text-muted-foreground"}`} />
+   433→   433→                        <span className={`text-xs font-semibold ${isSelected ? "text-ride-green" : "text-foreground"}`}>
+   434→   434→                          {vt.label}
+   435→   435→                        </span>
+   436→   436→                        <span className="text-xs font-bold text-foreground">₹{fare}</span>
+   437→   437→                        <span className="text-[10px] text-muted-foreground">{vt.eta}</span>
+   438→   438→                      </motion.button>
+   439→   439→                    );
+   440→   440→                  })}
+   441→   441→                </div>
+   442→   442→              </div>
+   443→   443→
+   444→   444→              {/* Nearby Drivers */}
+   445→   445→              <div className="mb-4">
+   446→   446→                <h3 className="mb-2.5 text-sm font-semibold text-foreground">Nearby Drivers</h3>
+   447→   447→                <div className="flex flex-col gap-2">
+   448→   448→                  {top3Drivers.map((driver) => (
+   449→   449→                    <motion.div
+   450→   450→                      key={driver.id}
+   451→   451→                      className={`flex items-center gap-3 rounded-xl p-2.5 cursor-pointer transition-premium ${
+   452→   452→                        selectedDriver?.id === driver.id
+   453→   453→                          ? "bg-ride-green/10 border border-ride-green/30"
+   454→   454→                          : "bg-foreground/[0.03] border border-transparent hover:bg-foreground/[0.06]"
+   455→   455→                      }`}
+   456→   456→                      onClick={() => setSelectedDriver(driver)}
+   457→   457→                      whileTap={{ scale: 0.98 }}
+   458→   458→                    >
+   459→   459→                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ride-green/10 text-ride-green text-sm font-bold">
+   460→   460→                        {driver.name.charAt(0)}
+   461→   461→                      </div>
+   462→   462→                      <div className="flex-1 min-w-0">
+   463→   463→                        <div className="flex items-center gap-1.5">
+   464→   464→                          <span className="text-sm font-semibold truncate">{driver.name}</span>
+   465→   465→                          <div className="flex items-center gap-0.5">
+   466→   466→                            <Star className="h-3 w-3 fill-ride-amber text-ride-amber" />
+   467→   467→                            <span className="text-xs font-medium">{driver.rating}</span>
+   468→   468→                          </div>
+   469→   469→                        </div>
+   470→   470→                        <span className="text-xs text-muted-foreground">{driver.vehiclePlate}</span>
+   471→   471→                      </div>
+   472→   472→                      <div className="text-right shrink-0">
+   473→   473→                        <span className="text-sm font-bold text-foreground">₹{driver.fare}</span>
+   474→   474→                        <p className="text-[10px] text-muted-foreground">{driver.eta} min</p>
+   475→   475→                      </div>
+   476→   476→                    </motion.div>
+   477→   477→                  ))}
+   478→   478→                </div>
+   479→   479→              </div>
+   480→   480→
+   481→   481→              {/* Payment Row */}
+   482→   482→              <div className="mb-3 flex items-center justify-between rounded-xl bg-foreground/[0.03] p-3">
+   483→   483→                <div className="flex items-center gap-2">
+   484→   484→                  <Wallet className="h-4 w-4 text-ride-green" />
+   485→   485→                  <span className="text-sm font-medium">LocalRide Wallet</span>
+   486→   486→                  <span className="text-xs text-muted-foreground">₹{walletBalance.toFixed(0)}</span>
+   487→   487→                </div>
+   488→   488→                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+   489→   489→              </div>
+   490→   490→
+   491→   491→              {/* Promo Code */}
+   492→   492→              <div className="mb-4 flex gap-2">
+   493→   493→                <Input
+   494→   494→                  placeholder="Promo code"
+   495→   495→                  value={promoCode}
+   496→   496→                  onChange={(e) => setPromoCode(e.target.value)}
+   497→   497→                  className="h-10 rounded-xl bg-foreground/[0.03] border-foreground/10 text-sm"
+   498→   498→                />
+   499→   499→                {promoCode && (
+   500→   500→                  <motion.button
+   501→   501→                    initial={{ scale: 0 }}
+   502→   502→                    animate={{ scale: 1 }}
+   503→   503→                    className="flex h-10 items-center justify-center rounded-xl bg-ride-green/10 px-3 text-xs font-semibold text-ride-green"
+   504→   504→                    onClick={() => { setPromoCode(""); toast.success("Promo code applied!"); }}
+   505→   505→                  >
+   506→   506→                    Apply
+   507→   507→                  </motion.button>
+   508→   508→                )}
+   509→   509→              </div>
+   510→   510→
+   511→   511→              {/* Book Ride Button */}
+   512→   512→              <motion.button
+   513→   513→                className="btn-premium gradient-primary w-full rounded-2xl py-3.5 text-base font-bold text-white shadow-glow-green-strong"
+   514→   514→                whileHover={{ scale: 1.01 }}
+   515→   515→                whileTap={{ scale: 0.97 }}
+   516→   516→                onClick={handleBookRide}
+   517→   517→              >
+   518→   518→                Book Ride — ₹{estimatedFare || "—"}
+   519→   519→              </motion.button>
+   520→   520→            </div>
+   521→   521→          </motion.div>
+   522→   522→        )}
+   523→   523→      </AnimatePresence>
+   524→   524→
+   525→   525→      {/* Searching State Overlay */}
+   526→   526→      <AnimatePresence>
+   527→   527→        {isSearchingDriver && (
+   528→   528→          <motion.div
+   529→   529→            className="absolute bottom-16 left-0 right-0 z-50 flex flex-col items-center justify-center px-4"
+   530→   530→            initial={{ opacity: 0 }}
+   531→   531→            animate={{ opacity: 1 }}
+   532→   532→            exit={{ opacity: 0 }}
+   533→   533→          >
+   534→   534→            <div className="glass-strong shadow-float w-full rounded-t-3xl rounded-b-2xl p-8 flex flex-col items-center gap-6">
+   535→   535→              {/* Pulsing Circles */}
+   536→   536→              <div className="relative flex h-32 w-32 items-center justify-center">
+   537→   537→                <motion.div
+   538→   538→                  className="absolute inset-0 rounded-full border-2 border-ride-green/30"
+   539→   539→                  animate={{ scale: [1, 1.5, 1], opacity: [0.6, 0, 0.6] }}
+   540→   540→                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+   541→   541→                />
+   542→   542→                <motion.div
+   543→   543→                  className="absolute inset-3 rounded-full border-2 border-ride-green/40"
+   544→   544→                  animate={{ scale: [1, 1.4, 1], opacity: [0.7, 0, 0.7] }}
+   545→   545→                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
+   546→   546→                />
+   547→   547→                <motion.div
+   548→   548→                  className="absolute inset-6 rounded-full border-2 border-ride-green/50"
+   549→   549→                  animate={{ scale: [1, 1.3, 1], opacity: [0.8, 0, 0.8] }}
+   550→   550→                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.8 }}
+   551→   551→                />
+   552→   552→                <motion.div
+   553→   553→                  className="gradient-primary flex h-16 w-16 items-center justify-center rounded-full shadow-glow-green"
+   554→   554→                  animate={{ rotate: [0, 360] }}
+   555→   555→                  transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+   556→   556→                >
+   557→   557→                  <Navigation className="h-7 w-7 text-white" />
+   558→   558→                </motion.div>
+   559→   559→              </div>
+   560→   560→
+   561→   561→              <div className="text-center">
+   562→   562→                <h3 className="text-lg font-bold text-foreground">Finding your driver</h3>
+   563→   563→                <motion.p
+   564→   564→                  className="mt-1 text-sm text-muted-foreground"
+   565→   565→                  animate={{ opacity: [0.5, 1, 0.5] }}
+   566→   566→                  transition={{ duration: 1.5, repeat: Infinity }}
+   567→   567→                >
+   568→   568→                  Looking for the best driver nearby...
+   569→   569→                </motion.p>
+   570→   570→              </div>
+   571→   571→
+   572→   572→              <motion.button
+   573→   573→                className="rounded-xl border border-destructive/30 px-8 py-2.5 text-sm font-semibold text-destructive hover:bg-destructive/5 transition-colors"
+   574→   574→                whileTap={{ scale: 0.95 }}
+   575→   575→                onClick={() => { setIsSearchingDriver(false); toast.info("Search cancelled"); }}
+   576→   576→              >
+   577→   577→                Cancel
+   578→   578→              </motion.button>
+   579→   579→            </div>
+   580→   580→          </motion.div>
+   581→   581→        )}
+   582→   582→      </AnimatePresence>
+   583→   583→
+   584→   584→      {/* Search Sheet — supports both pickup & destination editing */}
+   585→   585→      <AnimatePresence>
+   586→   586→        {showSearchSheet && (
+   587→   587→          <motion.div
+   588→   588→            className="absolute inset-0 z-50 flex flex-col bg-background"
+   589→   589→            initial={{ y: "100%" }}
+   590→   590→            animate={{ y: 0 }}
+   591→   591→            exit={{ y: "100%" }}
+   592→   592→            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+   593→   593→          >
+   594→   594→            {/* Mini route header showing both fields */}
+   595→   595→            <div className="safe-top border-b border-foreground/5 px-4 pt-3 pb-3">
+   596→   596→              <div className="relative">
+   597→   597→                {/* Dotted line */}
+   598→   598→                <div className="absolute left-[11px] top-[30px] bottom-[16px] w-[2px]" style={{
+   599→   599→                  backgroundImage: "repeating-linear-gradient(to bottom, var(--color-ride-green) 0px, var(--color-ride-green) 3px, transparent 3px, transparent 7px)",
+   600→   600→                  opacity: 0.35,
+   601→   601→                }} />
+   602→   602→
+   603→   603→                {/* Pickup mini-field */}
+   604→   604→                <div
+   605→   605→                  className={`relative flex items-center gap-3 rounded-xl px-2.5 py-2 mb-1.5 cursor-pointer transition-colors ${
+   606→   606→                    activeSearchField === "pickup" ? "bg-ride-green/5 ring-1 ring-ride-green/20" : "hover:bg-foreground/[0.03]"
+   607→   607→                  }`}
+   608→   608→                  onClick={() => {
+   609→   609→                    setActiveSearchField("pickup");
+   610→   610→                    setSearchQuery("");
+   611→   611→                  }}
+   612→   612→                >
+   613→   613→                  <CircleDot className={`h-3.5 w-3.5 shrink-0 ${activeSearchField === "pickup" ? "text-ride-green" : "text-muted-foreground"}`} />
+   614→   614→                  <span className={`text-sm truncate flex-1 ${pickup ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+   615→   615→                    {pickup ? pickup.address : currentLocation.address}
+   616→   616→                  </span>
+   617→   617→                </div>
+   618→   618→
+   619→   619→                {/* Destination mini-field */}
+   620→   620→                <div
+   621→   621→                  className={`relative flex items-center gap-3 rounded-xl px-2.5 py-2 cursor-pointer transition-colors ${
+   622→   622→                    activeSearchField === "destination" ? "bg-ride-green/5 ring-1 ring-ride-green/20" : "hover:bg-foreground/[0.03]"
+   623→   623→                  }`}
+   624→   624→                  onClick={() => {
+   625→   625→                    setActiveSearchField("destination");
+   626→   626→                    setSearchQuery("");
+   627→   627→                  }}
+   628→   628→                >
+   629→   629→                  <MapPin className={`h-3.5 w-3.5 shrink-0 ${activeSearchField === "destination" ? "text-ride-green" : "text-muted-foreground"}`} />
+   630→   630→                  <span className={`text-sm truncate flex-1 ${destination ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+   631→   631→                    {destination ? destination.address : "Choose destination"}
+   632→   632→                  </span>
+   633→   633→                </div>
+   634→   634→              </div>
+   635→   635→
+   636→   636→              {/* Search Input */}
+   637→   637→              <div className="mt-3 flex items-center gap-2">
+   638→   638→                <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+   639→   639→                <Input
+   640→   640→                  placeholder={activeSearchField === "pickup" ? "Search pickup location..." : "Search destination..."}
+   641→   641→                  value={searchQuery}
+   642→   642→                  onChange={(e) => setSearchQuery(e.target.value)}
+   643→   643→                  autoFocus
+   644→   644→                  className="h-9 border-0 bg-foreground/[0.04] rounded-xl text-sm shadow-none focus-visible:ring-1 focus-visible:ring-ride-green/20"
+   645→   645→                />
+   646→   646→                <motion.button
+   647→   647→                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-foreground/5"
+   648→   648→                  whileTap={{ scale: 0.9 }}
+   649→   649→                  onClick={() => setShowSearchSheet(false)}
+   650→   650→                >
+   651→   651→                  <X className="h-5 w-5" />
+   652→   652→                </motion.button>
+   653→   653→              </div>
+   654→   654→            </div>
+   655→   655→
+   656→   656→            <div className="flex-1 overflow-y-auto scrollbar-thin px-4 py-4">
+   657→   657→              {activeSearchField === "pickup" ? (
+   658→   658→                <>
+   659→   659→                  {/* Current Location Chip */}
+   660→   660→                  <div className="mb-5">
+   661→   661→                    <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Current Location</h3>
+   662→   662→                    <motion.button
+   663→   663→                      className="flex w-full items-center gap-3 rounded-xl bg-ride-green/5 border border-ride-green/15 p-3 text-left"
+   664→   664→                      whileTap={{ scale: 0.98 }}
+   665→   665→                      onClick={() => {
+   666→   666→                        setPickup(currentLocation);
+   667→   667→                        setShowSearchSheet(false);
+   668→   668→                        toast.success("Pickup set to your location");
+   669→   669→                      }}
+   670→   670→                    >
+   671→   671→                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ride-green/10 text-ride-green">
+   672→   672→                        <Navigation className="h-4 w-4" />
+   673→   673→                      </div>
+   674→   674→                      <div className="flex-1 min-w-0">
+   675→   675→                        <p className="text-sm font-medium text-foreground">Use current location</p>
+   676→   676→                        <p className="text-xs text-muted-foreground truncate">{currentLocation.address}</p>
+   677→   677→                      </div>
+   678→   678→                    </motion.button>
+   679→   679→                  </div>
+   680→   680→
+   681→   681→                  {/* Pickup Suggestions */}
+   682→   682→                  <div>
+   683→   683→                    <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nearby Pickup Points</h3>
+   684→   684→                    <div className="flex flex-col gap-1">
+   685→   685→                      {PICKUP_LOCATIONS.filter((p) =>
+   686→   686→                        !searchQuery || p.toLowerCase().includes(searchQuery.toLowerCase())
+   687→   687→                      ).map((place, i) => (
+   688→   688→                        <motion.button
+   689→   689→                          key={place}
+   690→   690→                          className="flex items-center gap-3 rounded-xl p-3 text-left hover:bg-foreground/[0.03] transition-colors"
+   691→   691→                          initial={{ opacity: 0, x: -10 }}
+   692→   692→                          animate={{ opacity: 1, x: 0 }}
+   693→   693→                          transition={{ delay: i * 0.04 }}
+   694→   694→                          whileTap={{ scale: 0.98 }}
+   695→   695→                          onClick={() => handleSelectPickup(place)}
+   696→   696→                        >
+   697→   697→                          <MapPin className="h-4 w-4 shrink-0 text-ride-green" />
+   698→   698→                          <span className="text-sm">{place}</span>
+   699→   699→                        </motion.button>
+   700→   700→                      ))}
+   701→   701→                    </div>
+   702→   702→                  </div>
+   703→   703→                </>
+   704→   704→              ) : (
+   705→   705→                <>
+   706→   706→                  {/* Favorite Locations */}
+   707→   707→                  <div className="mb-5">
+   708→   708→                    <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Saved Places</h3>
+   709→   709→                    <div className="flex gap-2">
+   710→   710→                      <motion.button
+   711→   711→                        className="flex items-center gap-2 rounded-xl bg-foreground/[0.03] px-3.5 py-2.5"
+   712→   712→                        whileTap={{ scale: 0.95 }}
+   713→   713→                        onClick={() => handleSelectDestination("Near Payyoli Beach Road, Payyoli")}
+   714→   714→                      >
+   715→   715→                        <Home className="h-4 w-4 text-ride-green" />
+   716→   716→                        <span className="text-sm font-medium">Home</span>
+   717→   717→                      </motion.button>
+   718→   718→                      <motion.button
+   719→   719→                        className="flex items-center gap-2 rounded-xl bg-foreground/[0.03] px-3.5 py-2.5"
+   720→   720→                        whileTap={{ scale: 0.95 }}
+   721→   721→                        onClick={() => handleSelectDestination("Vadakara Court Road, Vadakara")}
+   722→   722→                      >
+   723→   723→                        <Briefcase className="h-4 w-4 text-ride-green" />
+   724→   724→                        <span className="text-sm font-medium">Office</span>
+   725→   725→                      </motion.button>
+   726→   726→                      <motion.button
+   727→   727→                        className="flex items-center gap-2 rounded-xl bg-foreground/[0.03] px-3.5 py-2.5"
+   728→   728→                        whileTap={{ scale: 0.95 }}
+   729→   729→                        onClick={() => toast.info("Add your favorite places")}
+   730→   730→                      >
+   731→   731→                        <Plus className="h-4 w-4 text-muted-foreground" />
+   732→   732→                        <span className="text-sm font-medium text-muted-foreground">Add</span>
+   733→   733→                      </motion.button>
+   734→   734→                    </div>
+   735→   735→                  </div>
+   736→   736→
+   737→   737→                  {/* Popular Places */}
+   738→   738→                  <div>
+   739→   739→                    <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Popular Places</h3>
+   740→   740→                    <div className="flex flex-col gap-1">
+   741→   741→                      {POPULAR_PLACES.filter((p) =>
+   742→   742→                        !searchQuery || p.toLowerCase().includes(searchQuery.toLowerCase())
+   743→   743→                      ).map((place, i) => (
+   744→   744→                        <motion.button
+   745→   745→                          key={place}
+   746→   746→                          className="flex items-center gap-3 rounded-xl p-3 text-left hover:bg-foreground/[0.03] transition-colors"
+   747→   747→                          initial={{ opacity: 0, x: -10 }}
+   748→   748→                          animate={{ opacity: 1, x: 0 }}
+   749→   749→                          transition={{ delay: i * 0.04 }}
+   750→   750→                          whileTap={{ scale: 0.98 }}
+   751→   751→                          onClick={() => handleSelectDestination(place)}
+   752→   752→                        >
+   753→   753→                          <MapPin className="h-4 w-4 shrink-0 text-ride-green" />
+   754→   754→                          <span className="text-sm">{place}</span>
+   755→   755→                        </motion.button>
+   756→   756→                      ))}
+   757→   757→                    </div>
+   758→   758→                  </div>
+   759→   759→                </>
+   760→   760→              )}
+   761→   761→            </div>
+   762→   762→          </motion.div>
+   763→   763→        )}
+   764→   764→      </AnimatePresence>
+   765→   765→
+   766→   766→      {/* Bottom Navigation */}
+   767→   767→      <nav className="glass-strong safe-bottom fixed bottom-0 left-0 right-0 z-40 border-t border-foreground/5">
+   768→   768→        <div className="mx-auto flex max-w-md items-center justify-around py-2">
+   769→   769→          {[
+   770→   770→            { icon: MapPin, label: "Home", view: "home" as CustomerView, badge: 0 },
+   771→   771→            { icon: Clock, label: "Activity", view: "history" as CustomerView, badge: 0 },
+   772→   772→            { icon: Wallet, label: "Wallet", view: "wallet" as CustomerView, badge: 0 },
+   773→   773→            { icon: User, label: "Profile", view: "profile" as CustomerView, badge: unreadCount },
+   774→   774→          ].map(({ icon: Icon, label, view, badge }) => {
+   775→   775→            const isActive = customerView === view;
+   776→   776→            return (
+   777→   777→              <motion.button
+   778→   778→                key={view}
+   779→   779→                className="relative flex flex-col items-center gap-0.5 px-4 py-1"
+   780→   780→                whileTap={{ scale: 0.9 }}
+   781→   781→                onClick={() => setCustomerView(view)}
+   782→   782→              >
+   783→   783→                <div className="relative">
+   784→   784→                  <Icon
+   785→   785→                    className={`h-5 w-5 transition-premium ${isActive ? "text-ride-green" : "text-muted-foreground"}`}
+   786→   786→                  />
+   787→   787→                  {badge > 0 && (
+   788→   788→                    <span className="notification-dot absolute -top-1.5 -right-2 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-ride-green px-1 text-[9px] font-bold text-white">
+   789→   789→                      {badge}
+   790→   790→                    </span>
+   791→   791→                  )}
+   792→   792→                </div>
+   793→   793→                <span className={`text-[10px] font-medium transition-premium ${isActive ? "text-ride-green" : "text-muted-foreground"}`}>
+   794→   794→                  {label}
+   795→   795→                </span>
+   796→   796→                {isActive && (
+   797→   797→                  <motion.div
+   798→   798→                    className="absolute -bottom-1.5 h-0.5 w-5 rounded-full bg-ride-green"
+   799→   799→                    layoutId="nav-indicator"
+   800→   800→                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+   801→   801→                  />
+   802→   802→                )}
+   803→   803→              </motion.button>
+   804→   804→            );
+   805→   805→          })}
+   806→   806→        </div>
+   807→   807→      </nav>
+   808→   808→    </div>
+   809→   809→  );
+   810→   810→}

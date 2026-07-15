@@ -1,0 +1,553 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "leaflet/dist/leaflet.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* LocalRide Custom Colors */
+  --color-ride-green: #00C853;
+  --color-ride-green-dark: #009624;
+  --color-ride-emerald: #10B981;
+  --color-ride-teal: #14B8A6;
+  --color-ride-amber: #F59E0B;
+  --color-ride-orange: #F97316;
+  --color-ride-red: #EF4444;
+  --color-ride-blue: #3B82F6;
+}
+
+:root {
+  --radius: 0.75rem;
+  --background: oklch(0.985 0.002 110);
+  --foreground: oklch(0.145 0.005 110);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0.005 110);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0.005 110);
+  --primary: oklch(0.52 0.15 155);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.96 0.005 110);
+  --secondary-foreground: oklch(0.205 0.005 110);
+  --muted: oklch(0.96 0.005 110);
+  --muted-foreground: oklch(0.5 0.01 110);
+  --accent: oklch(0.96 0.01 155);
+  --accent-foreground: oklch(0.205 0.01 155);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.91 0.005 110);
+  --input: oklch(0.91 0.005 110);
+  --ring: oklch(0.52 0.15 155);
+  --chart-1: oklch(0.52 0.15 155);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0.002 110);
+  --sidebar-foreground: oklch(0.145 0.005 110);
+  --sidebar-primary: oklch(0.52 0.15 155);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.96 0.01 155);
+  --sidebar-accent-foreground: oklch(0.205 0.01 155);
+  --sidebar-border: oklch(0.91 0.005 110);
+  --sidebar-ring: oklch(0.52 0.15 155);
+}
+
+.dark {
+  --background: oklch(0.13 0.005 155);
+  --foreground: oklch(0.96 0.005 155);
+  --card: oklch(0.18 0.008 155);
+  --card-foreground: oklch(0.96 0.005 155);
+  --popover: oklch(0.18 0.008 155);
+  --popover-foreground: oklch(0.96 0.005 155);
+  --primary: oklch(0.65 0.17 155);
+  --primary-foreground: oklch(0.13 0.005 155);
+  --secondary: oklch(0.22 0.008 155);
+  --secondary-foreground: oklch(0.96 0.005 155);
+  --muted: oklch(0.22 0.008 155);
+  --muted-foreground: oklch(0.65 0.01 155);
+  --accent: oklch(0.25 0.01 155);
+  --accent-foreground: oklch(0.96 0.005 155);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.65 0.17 155);
+  --chart-1: oklch(0.65 0.17 155);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.16 0.006 155);
+  --sidebar-foreground: oklch(0.96 0.005 155);
+  --sidebar-primary: oklch(0.65 0.17 155);
+  --sidebar-primary-foreground: oklch(0.13 0.005 155);
+  --sidebar-accent: oklch(0.25 0.01 155);
+  --sidebar-accent-foreground: oklch(0.96 0.005 155);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.65 0.17 155);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ===== PREMIUM GLASSMORPHISM UTILITIES ===== */
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.dark .glass {
+  background: rgba(20, 20, 25, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.dark .glass-strong {
+  background: rgba(20, 20, 25, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-subtle {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass-subtle {
+  background: rgba(20, 20, 25, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ===== PREMIUM SHADOWS ===== */
+.shadow-premium {
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.03),
+    0 2px 4px rgba(0, 0, 0, 0.05),
+    0 12px 24px rgba(0, 0, 0, 0.05);
+}
+
+.dark .shadow-premium {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    0 12px 24px rgba(0, 0, 0, 0.4);
+}
+
+.shadow-float {
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.02),
+    0 4px 8px rgba(0, 0, 0, 0.04),
+    0 24px 48px rgba(0, 0, 0, 0.08);
+}
+
+.dark .shadow-float {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    0 24px 48px rgba(0, 0, 0, 0.5);
+}
+
+.shadow-glow-green {
+  box-shadow:
+    0 0 20px rgba(0, 200, 83, 0.15),
+    0 0 60px rgba(0, 200, 83, 0.08);
+}
+
+.shadow-glow-green-strong {
+  box-shadow:
+    0 0 30px rgba(0, 200, 83, 0.25),
+    0 0 80px rgba(0, 200, 83, 0.12),
+    0 0 120px rgba(0, 200, 83, 0.06);
+}
+
+/* ===== GRADIENT UTILITIES ===== */
+.gradient-primary {
+  background: linear-gradient(135deg, #00C853 0%, #00E676 50%, #69F0AE 100%);
+}
+
+.gradient-primary-dark {
+  background: linear-gradient(135deg, #009624 0%, #00C853 50%, #00E676 100%);
+}
+
+.gradient-premium {
+  background: linear-gradient(135deg, #0D9488 0%, #10B981 40%, #34D399 70%, #6EE7B7 100%);
+}
+
+.gradient-dark {
+  background: linear-gradient(135deg, #064E3B 0%, #065F46 50%, #047857 100%);
+}
+
+.gradient-mesh {
+  background:
+    radial-gradient(at 40% 20%, rgba(0, 200, 83, 0.12) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(16, 185, 129, 0.1) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(20, 184, 166, 0.08) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, rgba(52, 211, 153, 0.06) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(110, 231, 183, 0.08) 0px, transparent 50%);
+}
+
+.dark .gradient-mesh {
+  background:
+    radial-gradient(at 40% 20%, rgba(0, 200, 83, 0.08) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(16, 185, 129, 0.06) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(20, 184, 166, 0.05) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, rgba(52, 211, 153, 0.04) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(110, 231, 183, 0.05) 0px, transparent 50%);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #00C853, #10B981, #14B8A6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ===== ANIMATED GRADIENT BG ===== */
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.animated-gradient {
+  background: linear-gradient(-45deg, #00C853, #10B981, #14B8A6, #0D9488, #00E676);
+  background-size: 400% 400%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+/* ===== PULSE ANIMATION ===== */
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid #00C853;
+  animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+/* ===== MAP STYLES ===== */
+
+/* Leaflet container must fill its parent */
+.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 0;
+  font-family: inherit;
+}
+
+/* Remove leaflet focus outline */
+.leaflet-container:focus { outline: none; }
+
+/* Attribution styling */
+.leaflet-control-attribution {
+  font-size: 9px !important;
+  opacity: 0.65;
+}
+
+.map-container {
+  position: relative;
+  overflow: hidden;
+  /* Calm, neutral base keeps the ride route and pins legible. */
+  background-color: #edf0eb;
+  background-image:
+    radial-gradient(circle at 66% 43%, rgba(218, 224, 214, .7), transparent 28%),
+    linear-gradient(115deg, rgba(255,255,255,.38), transparent 45%);
+}
+
+.dark .map-container {
+  background-color: #202522;
+  background-image:
+    radial-gradient(circle at 66% 43%, rgba(61, 71, 63, .45), transparent 28%);
+}
+
+.ride-map-roads {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.ride-map-streets path {
+  fill: none;
+  stroke: rgba(255, 255, 255, .96);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 1px rgba(67, 74, 68, .15));
+}
+
+.ride-map-minor-streets path {
+  fill: none;
+  stroke: rgba(255, 255, 255, .66);
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+
+.dark .ride-map-streets path { stroke: rgba(94, 104, 96, .95); }
+.dark .ride-map-minor-streets path { stroke: rgba(64, 73, 66, .9); }
+
+.map-grid {
+  position: absolute;
+  inset: 0;
+  /* subtle block texture overlay */
+  background-image:
+    linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+  background-size: 19px 19px;
+}
+
+.dark .map-grid {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 19px 19px;
+}
+
+.map-roads {
+  position: absolute;
+  inset: 0;
+  /* diagonal arterial roads — neutral whites/grays, no green */
+  background-image:
+    linear-gradient(35deg,  transparent 47%, rgba(255,255,255,0.6) 47%, rgba(255,255,255,0.6) 53%, transparent 53%),
+    linear-gradient(-25deg, transparent 47%, rgba(255,255,255,0.4) 47%, rgba(255,255,255,0.4) 53%, transparent 53%),
+    linear-gradient(70deg,  transparent 47%, rgba(255,255,255,0.3) 47%, rgba(255,255,255,0.3) 53%, transparent 53%);
+  background-size: 140px 90px, 180px 110px, 220px 150px;
+}
+
+.dark .map-roads {
+  background-image:
+    linear-gradient(35deg,  transparent 47%, rgba(70,72,92,0.9) 47%, rgba(70,72,92,0.9) 53%, transparent 53%),
+    linear-gradient(-25deg, transparent 47%, rgba(60,62,80,0.7) 47%, rgba(60,62,80,0.7) 53%, transparent 53%),
+    linear-gradient(70deg,  transparent 47%, rgba(55,57,75,0.5) 47%, rgba(55,57,75,0.5) 53%, transparent 53%);
+  background-size: 140px 90px, 180px 110px, 220px 150px;
+}
+
+/* ===== SKELETON LOADING ===== */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg,
+    rgba(128, 128, 128, 0.1) 25%,
+    rgba(128, 128, 128, 0.2) 50%,
+    rgba(128, 128, 128, 0.1) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.dark .skeleton-shimmer {
+  background: linear-gradient(90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.04) 75%
+  );
+  background-size: 200% 100%;
+}
+
+/* ===== FLOATING ANIMATION ===== */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+/* Leaflet blue dot pulse (current location marker) */
+@keyframes pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }
+  50% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* ===== BOUNCE SUBTLE ===== */
+@keyframes bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 2s ease-in-out infinite;
+}
+
+/* ===== VEHICLE MARKER ===== */
+@keyframes vehicle-move {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(5px, -3px) rotate(5deg); }
+  50% { transform: translate(10px, -8px) rotate(-3deg); }
+  75% { transform: translate(15px, -5px) rotate(2deg); }
+  100% { transform: translate(20px, -12px) rotate(0deg); }
+}
+
+/* ===== SCROLLBAR ===== */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 200, 83, 0.3) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(0, 200, 83, 0.3);
+  border-radius: 4px;
+}
+
+/* ===== BOTTOM SHEET ===== */
+.bottom-sheet-backdrop {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+}
+
+/* ===== SAFE AREA ===== */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* ===== RIDE STATUS COLORS ===== */
+.status-searching { color: #F59E0B; background: rgba(245, 158, 11, 0.1); }
+.status-confirmed { color: #3B82F6; background: rgba(59, 130, 246, 0.1); }
+.status-arriving { color: #8B5CF6; background: rgba(139, 92, 246, 0.1); }
+.status-in-progress { color: #00C853; background: rgba(0, 200, 83, 0.1); }
+.status-completed { color: #10B981; background: rgba(16, 185, 129, 0.1); }
+.status-cancelled { color: #EF4444; background: rgba(239, 68, 68, 0.1); }
+
+/* ===== DRIVER STATUS TOGGLE ===== */
+.driver-status-online { background: #00C853; box-shadow: 0 0 12px rgba(0, 200, 83, 0.4); }
+.driver-status-busy { background: #F59E0B; box-shadow: 0 0 12px rgba(245, 158, 11, 0.4); }
+.driver-status-offline { background: #94A3B8; }
+.driver-status-break { background: #8B5CF6; box-shadow: 0 0 12px rgba(139, 92, 246, 0.4); }
+.driver-status-invisible { background: #64748B; }
+
+/* ===== PREMIUM BUTTON ===== */
+.btn-premium {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-premium::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.btn-premium:hover::after {
+  transform: translateX(100%);
+}
+
+/* ===== NOTIFICATION DOT ===== */
+@keyframes notification-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.notification-dot {
+  animation: notification-pulse 2s ease-in-out infinite;
+}
+
+/* ===== TRANSITION HELPERS ===== */
+.transition-premium {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-bounce {
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ===== COUNTER ANIMATION ===== */
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-count-up {
+  animation: count-up 0.4s ease-out forwards;
+}
+
+/* ===== ROTATE ===== */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
