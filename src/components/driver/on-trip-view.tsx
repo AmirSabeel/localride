@@ -12,6 +12,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import RideMap, { type RideMapMarker } from '@/components/ui/ride-map';
 import { useRouteInfo } from '@/hooks/use-route-info';
 import { useAnimatedCounter } from '@/hooks/use-animated-counter';
+import { useSocket } from '@/hooks/use-socket';
 
 type TripPhase = 'going_to_pickup' | 'at_pickup' | 'on_trip' | 'completed';
 
@@ -69,16 +70,57 @@ export default function OnTripView() {
   const realDistance = routeInfo.distance || TRIP_DATA.distance;
   const realDuration = routeInfo.duration || TRIP_DATA.duration;
 
-  // Simulate trip progression
-  useEffect(() => {
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    timers.push(setTimeout(() => setPhase('at_pickup'), 3000));
-    timers.push(setTimeout(() => setPhase('on_trip'), 5000));
-    timers.push(setTimeout(() => { setPhase('completed'); setShowCompletion(true); }, 12000));
-    return () => timers.forEach(clearTimeout);
-  }, []);
+  const socket = useSocket();
 
-  // Animate driver along real route geometry once on_trip
+  // Handle manual driver actions to progress trip phases
+  const handleNextPhase = async () => {
+    if (!activeRide) return;
+
+    let nextPhase: TripPhase = 'going_to_pickup';
+    let dbStatus = '';
+
+    if (phase === 'going_to_pickup') {
+      nextPhase = 'at_pickup';
+      dbStatus = 'driver_arriving';
+    } else if (phase === 'at_pickup') {
+      nextPhase = 'on_trip';
+      dbStatus = 'in_progress';
+    } else if (phase === 'on_trip') {
+      nextPhase = 'completed';
+      dbStatus = 'completed';
+    }
+
+    if (dbStatus) {
+      // 1. Update database
+      try {
+        await fetch(`/api/rides/${activeRide.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: dbStatus }),
+        });
+      } catch {
+        // Non-blocking
+      }
+
+      // 2. Emit status update to Socket.IO
+      if (socket?.connected) {
+        socket.emit("ride:status", {
+          rideId: activeRide.id,
+          status: dbStatus,
+          driverId: useAppStore.getState().userId,
+          customerId: activeRide.customerId,
+        });
+      }
+    }
+
+    setPhase(nextPhase);
+
+    if (nextPhase === 'completed') {
+      setShowCompletion(true);
+    }
+  };
+
+  // Animate driver along real route geometry once on_trip (fallback movement)
   useEffect(() => {
     if (phase !== 'on_trip') { if (phase !== 'completed') setRouteProgress(0); return; }
     if (progressTimerRef.current) clearInterval(progressTimerRef.current);
@@ -88,7 +130,7 @@ export default function OnTripView() {
       step++;
       setRouteProgress(Math.min(step / STEPS, 1));
       if (step >= STEPS) clearInterval(progressTimerRef.current!);
-    }, 80);
+    }, 150); // Slower, more realistic visual map progress
     return () => { if (progressTimerRef.current) clearInterval(progressTimerRef.current); };
   }, [phase]);
 
@@ -257,7 +299,7 @@ export default function OnTripView() {
           </div>
 
           {/* Stats Row */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3 mb-4">
             {[
               { icon: Timer, label: 'ETA', value: phase === 'completed' ? '0 min' : `${Math.max(1, Math.round(realDuration * (1 - routeProgress)))} min` },
               { icon: Route, label: 'Distance', value: routeInfo.loading ? '…' : `${realDistance} km` },
@@ -270,6 +312,19 @@ export default function OnTripView() {
               </div>
             ))}
           </div>
+
+          {/* Next Phase Action Button */}
+          {phase !== 'completed' && (
+            <motion.button
+              onClick={handleNextPhase}
+              className="w-full h-12 rounded-2xl gradient-primary text-white font-semibold text-sm shadow-glow-green btn-premium flex items-center justify-center gap-2"
+              whileTap={{ scale: 0.97 }}
+            >
+              {phase === 'going_to_pickup' && "I have Arrived"}
+              {phase === 'at_pickup' && "Start Trip"}
+              {phase === 'on_trip' && "Complete Trip"}
+            </motion.button>
+          )}
         </div>
       </motion.div>
 

@@ -13,6 +13,7 @@ import RideMap, { type RideMapMarker } from '@/components/ui/ride-map';
 import { useLocationTracking } from '@/hooks/use-location';
 import { useAnimatedCounter } from '@/hooks/use-animated-counter';
 import DriverBottomNav from '@/components/driver/driver-bottom-nav';
+import { useSocket } from '@/hooks/use-socket';
 
 const STATUS_CYCLE: DriverStatus[] = ['offline', 'online', 'busy', 'break', 'invisible'];
 
@@ -222,9 +223,46 @@ function IncomingRideOverlay({ onDeclined }: { onDeclined: () => void }) {
 
   if (!incomingRide) return null;
 
-  const handleAccept = () => {
+  const socket = useSocket();
+
+  const handleAccept = async () => {
     if (timerRef.current) clearInterval(timerRef.current);
-    // Store the customer name so OnTripView can display it correctly
+    const userId = useAppStore.getState().userId;
+
+    // 1. Update the database state
+    try {
+      await fetch(`/api/rides/${incomingRide.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "confirmed", driverId: userId }),
+      });
+    } catch {
+      // Non-blocking
+    }
+
+    // 2. Emit accept event to the customer via socket
+    if (socket?.connected) {
+      socket.emit("ride:accept", {
+        rideId: incomingRide.id,
+        driverId: userId,
+        driverName: useAppStore.getState().userName || "Rahul Krishnan",
+        driverAvatar: "",
+        driverRating: 4.8,
+        vehicleType: incomingRide.vehicleType || "sedan",
+        vehiclePlate: "KL-14-A-1234",
+        vehicleColor: "White",
+        eta: 3,
+      });
+
+      // Update room status
+      socket.emit("ride:status", {
+        rideId: incomingRide.id,
+        status: "confirmed",
+        driverId: userId,
+        customerId: incomingRide.customerId,
+      });
+    }
+
     setDriverCurrentCustomer(incomingRide.customer ?? 'Passenger');
     setDriverStatus('on_trip');
     setDriverView('on-trip');
@@ -344,15 +382,43 @@ export default function DriverHome() {
     watch: true,
   });
 
+  const socket = useSocket();
+
+  // Listen for real-time WebSocket ride requests
   useEffect(() => {
-    if (driverStatus !== 'online' || simulatedRef.current) return;
+    if (!socket) return;
+
+    const handleIncomingRide = (data: any) => {
+      setIncomingRide({
+        id: data.rideId,
+        customerId: data.customer?.id,
+        customer: data.customer?.name || "Rider",
+        pickup: data.pickup,
+        destination: data.destination,
+        fare: data.fare,
+        distance: data.distance || 5.2,
+        duration: data.duration || 12,
+        vehicleType: data.vehicleType,
+      });
+      toast('New ride request nearby!', { icon: '🔔' });
+    };
+
+    socket.on("ride:incoming", handleIncomingRide);
+    return () => {
+      socket.off("ride:incoming", handleIncomingRide);
+    };
+  }, [socket, setIncomingRide]);
+
+  // Fallback: Mock simulation if not connected to live server
+  useEffect(() => {
+    if (socket?.connected || driverStatus !== 'online' || simulatedRef.current) return;
     const timer = setTimeout(() => {
       simulatedRef.current = true;
       setIncomingRide(MOCK_INCOMING_RIDE);
       toast('New ride request nearby!', { icon: '🔔' });
-    }, 5000);
+    }, 15000); // 15s delay fallback
     return () => clearTimeout(timer);
-  }, [driverStatus, setIncomingRide]);
+  }, [driverStatus, socket?.connected, setIncomingRide]);
 
   // Called when a ride is declined or expires — allow re-triggering after 8s
   const handleRideDeclined = useCallback(() => {
