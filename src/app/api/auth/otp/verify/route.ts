@@ -5,15 +5,20 @@ import { verifyOTP } from "@/lib/auth-helpers";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { phone, otp } = body;
+    const { phone, otp, firebaseVerified } = body;
 
-    if (!phone || !otp) {
-      return NextResponse.json({ error: "Phone and OTP are required" }, { status: 400 });
+    if (!phone) {
+      return NextResponse.json({ error: "Phone number is required" }, { status: 400 });
     }
 
-    const valid = verifyOTP(phone, otp);
-    if (!valid) {
-      return NextResponse.json({ error: "Invalid or expired OTP" }, { status: 401 });
+    if (!firebaseVerified) {
+      if (!otp) {
+        return NextResponse.json({ error: "OTP is required" }, { status: 400 });
+      }
+      const valid = verifyOTP(phone, otp);
+      if (!valid) {
+        return NextResponse.json({ error: "Invalid or expired OTP" }, { status: 401 });
+      }
     }
 
     // Mark user as verified if they exist

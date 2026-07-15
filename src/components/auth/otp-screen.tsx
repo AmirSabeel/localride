@@ -83,11 +83,24 @@ export default function OTPScreen() {
     setIsVerifying(true);
 
     try {
-      const phone = localStorage.getItem("otp_phone") || "+91 94470 54321";
+      const phone = localStorage.getItem("otp_phone") || "";
+
+      // 1. Confirm code with Firebase on the frontend
+      const confirmationResult = (window as any).confirmationResult;
+      if (!confirmationResult) {
+        toast.error("No verification code request found. Try registering again.");
+        setIsVerifying(false);
+        verifyingRef.current = false;
+        return;
+      }
+
+      await confirmationResult.confirm(code);
+
+      // 2. Notify backend to mark phone as verified in PostgreSQL DB
       const res = await fetch("/api/auth/otp/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, otp: code }),
+        body: JSON.stringify({ phone, firebaseVerified: true }),
       });
 
       if (res.ok) {
@@ -95,16 +108,10 @@ export default function OTPScreen() {
         toast.success("Phone verified successfully!");
         setTimeout(() => setAuthView("role-select"), 1200);
       } else {
-        // In dev mode, accept any 6-digit code
-        setIsComplete(true);
-        toast.success("Phone verified! (dev mode)");
-        setTimeout(() => setAuthView("role-select"), 1200);
+        toast.error("Failed to update database profile status.");
       }
-    } catch {
-      // Fallback — accept anyway for demo
-      setIsComplete(true);
-      toast.success("Phone verified successfully!");
-      setTimeout(() => setAuthView("role-select"), 1200);
+    } catch (err: any) {
+      toast.error(err.message || "Invalid verification code.");
     } finally {
       setIsVerifying(false);
       verifyingRef.current = false;

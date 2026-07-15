@@ -19,6 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppStore, type UserRole } from "@/store/app-store";
 import { toast } from "sonner";
+import { auth } from "@/lib/firebase";
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -96,34 +98,27 @@ export default function RegisterScreen() {
       }
 
       // 2. Send OTP if phone provided
+      // 2. Send real SMS OTP via Firebase Phone Auth
       if (phone) {
-        const otpRes = await fetch("/api/auth/otp/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone }),
-        });
-        const otpData = await otpRes.json();
-        // In dev mode, log the OTP for easy testing
-        if (otpData._dev_otp) {
-          console.log(`🔑 Dev OTP: ${otpData._dev_otp}`);
-          toast.info(`Dev OTP: ${otpData._dev_otp}`, { duration: 10000 });
+        // Setup invisible recaptcha verifier
+        if (!(window as any).recaptchaVerifier) {
+          (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+            size: "invisible",
+            callback: () => {},
+          });
         }
+        
+        const confirmationResult = await signInWithPhoneNumber(auth, phone, (window as any).recaptchaVerifier);
+        (window as any).confirmationResult = confirmationResult;
+        localStorage.setItem("otp_phone", phone);
+        toast.success("Verification SMS sent! check your phone.");
       }
 
       const u = data.user;
-      // Store user data and navigate to OTP verification
       login(selectedRole, u.id, u.name, u.avatar || "", u.phone || phone || "");
-      toast.success(`Account created! Welcome, ${u.name}`);
-    } catch {
-      // Fallback to demo mode
-      const mockData: Record<UserRole, { id: string; n: string; phone: string }> = {
-        customer: { id: "c1", n: "Arjun Krishnan", phone: "+91 94470 54321" },
-        driver: { id: "d1", n: "Rahul Krishnan", phone: "+91 94470 12345" },
-        admin: { id: "a1", n: "Admin User", phone: "+91 11111 11111" },
-      };
-      const data = mockData[selectedRole];
-      login(selectedRole, data.id, name || data.n, "", phone || data.phone);
-      toast.success(`Account created! Welcome, ${name || data.n} (demo mode)`);
+      setAuthView("otp"); // Navigate to OTP code screen
+    } catch (err: any) {
+      toast.error(err.message || "Failed to trigger phone verification");
     } finally {
       setIsLoading(false);
     }
@@ -141,6 +136,9 @@ export default function RegisterScreen() {
       <div className="absolute inset-0 gradient-mesh opacity-40" />
 
       <div className="relative z-10 flex min-h-dvh flex-col px-6 py-6 safe-top">
+        {/* Hidden recaptcha element for Firebase Phone verification */}
+        <div id="recaptcha-container"></div>
+
         {/* Back */}
         <motion.div variants={itemVariants} className="mb-4">
           <motion.button
