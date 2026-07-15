@@ -2,9 +2,13 @@
 
 import { useTheme } from "next-themes";
 import { useEffect } from "react";
+import { useSocket } from "@/hooks/use-socket";
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { resolvedTheme, setTheme } = useTheme();
+
+  // Initialize global Socket.IO connection
+  useSocket();
 
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]');

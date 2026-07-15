@@ -10,6 +10,7 @@ import {
 import { useAppStore, type RideStatus } from "@/store/app-store";
 import RideMap, { type RideMapMarker } from "@/components/ui/ride-map";
 import { useRouteInfo } from "@/hooks/use-route-info";
+import { useSocket } from "@/hooks/use-socket";
 
 const STATUS_STEPS: { key: RideStatus; label: string; icon: React.ElementType }[] = [
   { key: "searching", label: "Searching", icon: Search },
@@ -29,8 +30,50 @@ export default function RideTracking() {
   const routePointsRef = useRef<[number, number][]>([]);
   const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Simulate ride progression through status steps
+  const socket = useSocket();
+
+  // Listen for real-time Socket.IO events (driver location + status updates)
   useEffect(() => {
+    if (!socket || !activeRide) return;
+
+    // Listen for real-time driver coordinates
+    const handleDriverLocation = (data: { driverId: string; lat: number; lng: number }) => {
+      setActiveRide({
+        ...activeRide,
+        driverLocation: { lat: data.lat, lng: data.lng },
+      });
+    };
+
+    // Listen for driver status changes
+    const handleRideStatus = (data: { rideId: string; status: RideStatus }) => {
+      if (data.rideId !== activeRide.id) return;
+      const idx = STATUS_STEPS.findIndex((s) => s.key === data.status);
+      if (idx >= 0) {
+        setStatusIndex(idx);
+        setActiveRide({
+          ...activeRide,
+          status: data.status,
+        });
+
+        if (data.status === "completed") {
+          setTimeout(() => setCustomerView("ride-complete"), 2000);
+        }
+      }
+    };
+
+    socket.on("driver:location", handleDriverLocation);
+    socket.on("ride:status:update", handleRideStatus);
+
+    return () => {
+      socket.off("driver:location", handleDriverLocation);
+      socket.off("ride:status:update", handleRideStatus);
+    };
+  }, [socket, activeRide, setActiveRide, setCustomerView]);
+
+  // Fallback: If socket connection fails, keep a slow client-side simulation
+  useEffect(() => {
+    if (socket?.connected) return; // Disable simulation if connected to real system
+
     if (statusIndex >= 3) return;
     const timer = setTimeout(() => {
       const next = statusIndex + 1;
@@ -39,17 +82,18 @@ export default function RideTracking() {
       if (newStatus === "completed") {
         setTimeout(() => setCustomerView("ride-complete"), 2000);
       }
-    }, 3000);
+    }, 15000); // Slower fallback simulation (15s per step)
     return () => clearTimeout(timer);
-  }, [statusIndex, setCustomerView]);
+  }, [statusIndex, socket?.connected, setCustomerView]);
 
-  // Animate driver along the real route once in_progress
+  // Simulate fallback driver movement if socket is not connected
   useEffect(() => {
+    if (socket?.connected) return;
+
     if (statusIndex < 2) { setRouteProgress(0); return; }
     if (progressTimerRef.current) clearInterval(progressTimerRef.current);
-    // Step from current progress to 1.0 over ~15s
     const STEPS = 150;
-    const INTERVAL = 100; // ms
+    const INTERVAL = 200;
     let step = 0;
     progressTimerRef.current = setInterval(() => {
       step++;
@@ -57,7 +101,7 @@ export default function RideTracking() {
       if (step >= STEPS) clearInterval(progressTimerRef.current!);
     }, INTERVAL);
     return () => { if (progressTimerRef.current) clearInterval(progressTimerRef.current); };
-  }, [statusIndex]);
+  }, [statusIndex, socket?.connected]);
 
   /** Interpolate a lat/lng along the route geometry at progress 0-1 */
   function interpolateRoute(pts: [number, number][], progress: number): { lat: number; lng: number; heading: number } {

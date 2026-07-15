@@ -15,6 +15,7 @@ import { useNominatimSearch } from "@/hooks/use-nominatim-search";
 import { Input } from "@/components/ui/input";
 import RideMap from "@/components/ui/ride-map";
 import BottomNav from "@/components/customer/bottom-nav";
+import { useSocket } from "@/hooks/use-socket";
 
 type SearchField = "pickup" | "destination";
 
@@ -272,6 +273,46 @@ export default function CustomerHome() {
     "Malabar Mall, Kozhikode",
   ], [currentLocation.address]);
 
+  const socket = useSocket();
+
+  // Listen for real-time ride accepted updates via Socket.IO
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleRideAccepted = (data: any) => {
+      const activeData = {
+        id: data.rideId,
+        status: "confirmed" as const,
+        driverName: data.driverName || "Rajesh Kumar",
+        driverAvatar: data.driverAvatar || "",
+        driverPhone: "+91 98765 43210",
+        vehicleType: selectedVehicleType,
+        vehiclePlate: data.vehiclePlate || "KL-14-A-1234",
+        vehicleColor: data.vehicleColor || "White",
+        driverRating: data.driverRating || 4.8,
+        pickup: pickup!,
+        destination: destination!,
+        fare: estimatedFare || 85,
+        distance: estimatedDistance,
+        duration: estimatedDuration || Math.max(2, Math.round(estimatedDistance * 2.2)),
+        driverLocation: data.driverLocation || { lat: pickup!.lat + 0.005, lng: pickup!.lng - 0.004 },
+        eta: data.eta || 3,
+        paymentMethod: "wallet" as const,
+      };
+
+      setActiveRide(activeData);
+      setIsSearchingDriver(false);
+      setShowVehicleSheet(false);
+      setCustomerView("ride-tracking");
+      toast.success("Driver found! 🎉", { description: `${activeData.driverName} is on the way` });
+    };
+
+    socket.on("ride:accepted", handleRideAccepted);
+    return () => {
+      socket.off("ride:accepted", handleRideAccepted);
+    };
+  }, [socket, pickup, destination, estimatedFare, estimatedDistance, estimatedDuration, selectedVehicleType, setActiveRide, setIsSearchingDriver, setShowVehicleSheet, setCustomerView]);
+
   useEffect(() => {
     fetch("/api/rides?type=nearby-drivers")
       .then((r) => r.json())
@@ -403,9 +444,10 @@ export default function CustomerHome() {
     }
     setIsSearchingDriver(true);
 
-    // 1. Persist the ride in DB
+    // 1. Persist the ride in DB and emit to socket server
+    let createdRideId = "ride-" + Date.now();
     try {
-      await fetch("/api/rides", {
+      const res = await fetch("/api/rides", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -421,52 +463,65 @@ export default function CustomerHome() {
           paymentMethod: "wallet",
         }),
       });
+      const data = await res.json();
+      if (data.ride?.id) createdRideId = data.ride.id;
     } catch {
       // Non-blocking — ride still works in demo mode
     }
 
-    // 2. Mock driver matching (real-time matching via socket.io will come later)
-    setTimeout(() => {
-      const driver = selectedDriver || nearbyDrivers[0] || {
-        id: "d-mock", name: "Rahul K.", avatar: "", vehicleType: "sedan" as VehicleType,
-        vehiclePlate: "KL-14-A-1234", rating: 4.8, lat: 11.5100, lng: 75.7830, eta: 3, fare: 85,
-      };
-      const mockRide = {
-        id: "ride-" + Date.now(),
-        status: "confirmed" as const,
-        driverName: driver.name,
-        driverAvatar: driver.avatar,
-        driverPhone: "+91 98765 43210",
+    if (socket?.connected) {
+      socket.emit("ride:request", {
+        rideId: createdRideId,
+        customerId: userId || "demo-customer",
+        pickup: { address: pickup.address, lat: pickup.lat, lng: pickup.lng },
+        destination: { address: destination.address, lat: destination.lat, lng: destination.lng },
+        fare: estimatedFare || 85,
         vehicleType: selectedVehicleType,
-        vehiclePlate: driver.vehiclePlate,
-        vehicleColor: "White",
-        driverRating: driver.rating,
-        pickup,
-        destination,
-        fare: estimatedFare || driver.fare,
-        distance: estimatedDistance,
-        duration: estimatedDuration || Math.max(2, Math.round(estimatedDistance * 2.2)),
-        driverLocation: { lat: driver.lat, lng: driver.lng },
-        eta: driver.eta,
-        paymentMethod: "wallet" as const,
-      };
-      setActiveRide(mockRide);
-      setIsSearchingDriver(false);
-      setShowVehicleSheet(false);
-      setCustomerView("ride-tracking");
-      toast.success("Driver found! 🎉", { description: `${driver.name} is on the way` });
-
-      // Notify driver side with the real booked ride data
-      setIncomingRide({
-        id: mockRide.id,
-        customer: userName || "Rider",
-        pickup: { address: pickup!.address, lat: pickup!.lat, lng: pickup!.lng },
-        destination: { address: destination!.address, lat: destination!.lat, lng: destination!.lng },
-        fare: mockRide.fare,
-        distance: mockRide.distance,
-        duration: mockRide.duration,
       });
-    }, 3000);
+    } else {
+      // Fallback: Mock matching if socket connection fails
+      setTimeout(() => {
+        const driver = selectedDriver || nearbyDrivers[0] || {
+          id: "d-mock", name: "Rahul K.", avatar: "", vehicleType: "sedan" as VehicleType,
+          vehiclePlate: "KL-14-A-1234", rating: 4.8, lat: 11.5100, lng: 75.7830, eta: 3, fare: 85,
+        };
+        const mockRide = {
+          id: createdRideId,
+          status: "confirmed" as const,
+          driverName: driver.name,
+          driverAvatar: driver.avatar,
+          driverPhone: "+91 98765 43210",
+          vehicleType: selectedVehicleType,
+          vehiclePlate: driver.vehiclePlate,
+          vehicleColor: "White",
+          driverRating: driver.rating,
+          pickup,
+          destination,
+          fare: estimatedFare || driver.fare,
+          distance: estimatedDistance,
+          duration: estimatedDuration || Math.max(2, Math.round(estimatedDistance * 2.2)),
+          driverLocation: { lat: driver.lat, lng: driver.lng },
+          eta: driver.eta,
+          paymentMethod: "wallet" as const,
+        };
+        setActiveRide(mockRide);
+        setIsSearchingDriver(false);
+        setShowVehicleSheet(false);
+        setCustomerView("ride-tracking");
+        toast.success("Driver found! 🎉", { description: `${driver.name} is on the way` });
+
+        // Notify driver side with the real booked ride data
+        setIncomingRide({
+          id: mockRide.id,
+          customer: userName || "Rider",
+          pickup: { address: pickup!.address, lat: pickup!.lat, lng: pickup!.lng },
+          destination: { address: destination!.address, lat: destination!.lat, lng: destination!.lng },
+          fare: mockRide.fare,
+          distance: mockRide.distance,
+          duration: mockRide.duration,
+        });
+      }, 3000);
+    }
   };
 
   // Build map markers
