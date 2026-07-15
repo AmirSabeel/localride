@@ -305,7 +305,7 @@ export default function CustomerHome() {
     // Hard safety timeout — always resets spinner even if GPS callback never fires
     const safetyTimeout = setTimeout(() => {
       setIsLocating(false);
-      toast.error("Location timed out. Try again or check GPS.", { id: "locating" });
+      toast.error("Location timed out. Move to open area.", { id: "locating" });
     }, 9_000);
 
     navigator.geolocation.getCurrentPosition(
