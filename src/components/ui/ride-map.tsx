@@ -31,9 +31,9 @@ interface RideMapProps {
   interactive?: boolean;
 }
 
-const TILE_LIGHT = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-const TILE_DARK  = "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png";
-const TILE_ATTR  = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const TILE_LIGHT = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+const TILE_DARK  = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+const TILE_ATTR  = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
 // ── marker helpers ────────────────────────────────────────────────────────────
 
@@ -338,17 +338,17 @@ export default function RideMap({
     const { done, left } = splitRoute(pts, progress);
     const layers: { remove: () => void }[] = [];
 
-    const addPolyline = (coords: [number, number][], color: string, weight: number, dashArray?: string) => {
+    const addPolyline = (coords: [number, number][], color: string, weight: number, className?: string) => {
       if (coords.length < 2) return;
       // subtle shadow
       const shadow = L.polyline(coords, {
-        color: "rgba(0,0,0,0.12)", weight: weight + 5,
-        lineCap: "round", lineJoin: "round", smoothFactor: 1,
+        color: "rgba(0,0,0,0.08)", weight: weight + 4,
+        lineCap: "round", lineJoin: "round", smoothFactor: 1.2,
       }).addTo(mapRef.current);
       const line = L.polyline(coords, {
         color, weight,
-        lineCap: "round", lineJoin: "round", smoothFactor: 1,
-        dashArray,
+        lineCap: "round", lineJoin: "round", smoothFactor: 1.2,
+        className,
       }).addTo(mapRef.current);
       layers.push({ remove: () => { shadow.remove(); line.remove(); } });
     };
@@ -356,16 +356,16 @@ export default function RideMap({
     // Remaining route: white casing + dark/light fill
     if (left.length >= 2) {
       const casing = L.polyline(left, {
-        color: dark ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.85)",
-        weight: 10, lineCap: "round", lineJoin: "round", smoothFactor: 1,
+        color: dark ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.85)",
+        weight: 10, lineCap: "round", lineJoin: "round", smoothFactor: 1.2,
       }).addTo(mapRef.current);
       layers.push({ remove: () => casing.remove() });
-      addPolyline(left, dark ? "#e2e8f0" : "#1a1a2e", 6);
+      addPolyline(left, dark ? "#60a5fa" : "#3b82f6", 6, "animated-route-line");
     }
 
     // Completed route: green line
     if (done.length >= 2) {
-      addPolyline(done, "#22c55e", 5);
+      addPolyline(done, "#10b981", 5);
     }
 
     routeLayerRef.current = { remove: () => layers.forEach((l) => l.remove()) };
