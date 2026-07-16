@@ -100,6 +100,9 @@ export default function RegisterScreen() {
       // 2. Send OTP if phone provided
       // 2. Send real SMS OTP via Firebase Phone Auth
       if (phone) {
+        if (!auth) {
+          throw new Error("Phone verification service is currently unavailable. Please verify your Firebase configuration.");
+        }
         // Setup invisible recaptcha verifier
         if (!(window as any).recaptchaVerifier) {
           (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
@@ -220,6 +223,7 @@ export default function RegisterScreen() {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       className="h-11 rounded-xl pl-10 text-sm transition-all focus-visible:ring-ride-green/30"
+                      required
                     />
                   </div>
                 </div>

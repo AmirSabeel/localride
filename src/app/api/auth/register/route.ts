@@ -8,9 +8,9 @@ export async function POST(request: Request) {
     const { name, email, phone, password, role } = body;
 
     // Validate required fields
-    if (!name || !email || !password || !role) {
+    if (!name || !email || !phone || !password || !role) {
       return NextResponse.json(
-        { error: "Name, email, password, and role are required" },
+        { error: "Name, email, phone, password, and role are required" },
         { status: 400 }
       );
     }
