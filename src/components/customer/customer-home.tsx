@@ -273,6 +273,20 @@ export default function CustomerHome() {
     "Malabar Mall, Kozhikode",
   ], [currentLocation.address]);
 
+  // Real road distance + duration via OSRM (haversine fallback while loading)
+  const routeInfo = useRouteInfo(
+    pickup ?? currentLocation,
+    destination ?? null,
+  );
+  const estimatedDistance = routeInfo.distance;
+  const estimatedDuration = routeInfo.duration;
+
+  const estimatedFare = useMemo(() => {
+    if (!pickup || !destination || !estimatedDistance) return 0;
+    const vt = VEHICLE_TYPES.find((v) => v.type === selectedVehicleType);
+    return vt ? Math.round(vt.baseFare + vt.perKm * estimatedDistance) : 0;
+  }, [pickup, destination, selectedVehicleType, estimatedDistance]);
+
   const socket = useSocket();
 
   // Listen for real-time ride accepted updates via Socket.IO
@@ -390,19 +404,7 @@ export default function CustomerHome() {
     );
   }, [permissionState, setCurrentLocation]);
 
-  // Real road distance + duration via OSRM (haversine fallback while loading)
-  const routeInfo = useRouteInfo(
-    pickup ?? currentLocation,
-    destination ?? null,
-  );
-  const estimatedDistance = routeInfo.distance;
-  const estimatedDuration = routeInfo.duration;
 
-  const estimatedFare = useMemo(() => {
-    if (!pickup || !destination || !estimatedDistance) return 0;
-    const vt = VEHICLE_TYPES.find((v) => v.type === selectedVehicleType);
-    return vt ? Math.round(vt.baseFare + vt.perKm * estimatedDistance) : 0;
-  }, [pickup, destination, selectedVehicleType, estimatedDistance]);
 
   const top3Drivers = useMemo(() => nearbyDrivers.slice(0, 3), [nearbyDrivers]);
 
