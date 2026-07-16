@@ -203,7 +203,7 @@ export default function CustomerHome() {
     nearbyDrivers, setNearbyDrivers, activeRide, setActiveRide, walletBalance,
     showSearchSheet, setShowSearchSheet, showVehicleSheet, setShowVehicleSheet,
     isSearchingDriver, setIsSearchingDriver, userName, userPhone, unreadCount,
-    setIncomingRide,
+    setIncomingRide, userId,
   } = useAppStore();
 
   const [searchQuery, setSearchQuery] = useState("");
