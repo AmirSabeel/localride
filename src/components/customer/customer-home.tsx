@@ -13,8 +13,10 @@ import { useLocationTracking } from "@/hooks/use-location";
 import { useRouteInfo } from "@/hooks/use-route-info";
 import { useNominatimSearch } from "@/hooks/use-nominatim-search";
 import { Input } from "@/components/ui/input";
-import RideMap from "@/components/ui/ride-map";
+import dynamic from "next/dynamic";
 import BottomNav from "@/components/customer/bottom-nav";
+
+const RideMap = dynamic(() => import("@/components/ui/ride-map"), { ssr: false });
 import { useSocket } from "@/hooks/use-socket";
 
 type SearchField = "pickup" | "destination";

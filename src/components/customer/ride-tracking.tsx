@@ -8,9 +8,12 @@ import {
   Star, Clock, Route, Shield, Car, CheckCircle2, Search, UserCheck, CircleDot,
 } from "lucide-react";
 import { useAppStore, type RideStatus } from "@/store/app-store";
-import RideMap, { type RideMapMarker } from "@/components/ui/ride-map";
+import dynamic from "next/dynamic";
 import { useRouteInfo } from "@/hooks/use-route-info";
 import { useSocket } from "@/hooks/use-socket";
+import { type RideMapMarker } from "@/components/ui/ride-map";
+
+const RideMap = dynamic(() => import("@/components/ui/ride-map"), { ssr: false });
 
 const STATUS_STEPS: { key: RideStatus; label: string; icon: React.ElementType }[] = [
   { key: "searching", label: "Searching", icon: Search },

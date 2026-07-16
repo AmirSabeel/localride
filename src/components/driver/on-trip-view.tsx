@@ -9,10 +9,13 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import RideMap, { type RideMapMarker } from '@/components/ui/ride-map';
+import dynamic from 'next/dynamic';
 import { useRouteInfo } from '@/hooks/use-route-info';
 import { useAnimatedCounter } from '@/hooks/use-animated-counter';
 import { useSocket } from '@/hooks/use-socket';
+import { type RideMapMarker } from '@/components/ui/ride-map';
+
+const RideMap = dynamic(() => import('@/components/ui/ride-map'), { ssr: false });
 
 type TripPhase = 'going_to_pickup' | 'at_pickup' | 'on_trip' | 'completed';
 

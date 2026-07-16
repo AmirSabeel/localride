@@ -9,11 +9,14 @@ import {
   MapPin, Star, Route, IndianRupee, Timer,
 } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
-import RideMap, { type RideMapMarker } from '@/components/ui/ride-map';
+import dynamic from 'next/dynamic';
 import { useLocationTracking } from '@/hooks/use-location';
 import { useAnimatedCounter } from '@/hooks/use-animated-counter';
 import DriverBottomNav from '@/components/driver/driver-bottom-nav';
 import { useSocket } from '@/hooks/use-socket';
+import { type RideMapMarker } from '@/components/ui/ride-map';
+
+const RideMap = dynamic(() => import('@/components/ui/ride-map'), { ssr: false });
 
 const STATUS_CYCLE: DriverStatus[] = ['offline', 'online', 'busy', 'break', 'invisible'];
 
