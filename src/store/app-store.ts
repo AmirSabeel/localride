@@ -139,6 +139,7 @@ interface AppState {
   // Actions
   setAuthView: (view: AuthView) => void;
   setOtpPhone: (phone: string) => void;
+  setTempUser: (id: string, name: string, avatar: string, phone: string, role: UserRole) => void;
   login: (role: UserRole, id: string, name: string, avatar: string, phone: string) => void;
   logout: () => void;
   setCustomerView: (view: CustomerView) => void;
@@ -229,6 +230,13 @@ export const useAppStore = create<AppState>()(
       // Actions
       setAuthView: (view) => set({ authView: view }),
       setOtpPhone: (phone) => set({ otpPhone: phone }),
+      setTempUser: (id, name, avatar, phone, role) => set({
+        userId: id,
+        userName: name,
+        userAvatar: avatar,
+        userPhone: phone,
+        userRole: role,
+      }),
       login: (role, id, name, avatar, phone) => set({
         isAuthenticated: true,
         userRole: role,

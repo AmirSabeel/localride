@@ -25,6 +25,7 @@ export async function POST(request: Request) {
         role: true,
         avatar: true,
         password: true,
+        isVerified: true,
       },
     });
 

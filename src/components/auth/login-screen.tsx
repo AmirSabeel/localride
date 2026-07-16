@@ -36,6 +36,7 @@ const itemVariants = {
 
 export default function LoginScreen() {
   const setAuthView = useAppStore((s) => s.setAuthView);
+  const setTempUser = useAppStore((s) => s.setTempUser);
   const login = useAppStore((s) => s.login);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -63,6 +64,15 @@ export default function LoginScreen() {
       }
 
       const u = data.user;
+      if (u.isVerified === false) {
+        setTempUser(u.id, u.name, u.avatar || "", u.phone || "", u.role);
+        if (u.phone) {
+          localStorage.setItem("otp_phone", u.phone);
+        }
+        toast.info("Please verify your phone number to log in.");
+        setAuthView("otp");
+        return;
+      }
       login(u.role, u.id, u.name, u.avatar || "", u.phone || "");
       toast.success(`Welcome back, ${u.name.split(" ")[0]}!`);
     } catch {

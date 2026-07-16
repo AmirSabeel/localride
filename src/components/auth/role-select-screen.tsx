@@ -104,10 +104,19 @@ const cardTap = {
 
 export default function RoleSelectScreen() {
   const login = useAppStore((s) => s.login);
+  const userId = useAppStore((s) => s.userId);
+  const userName = useAppStore((s) => s.userName);
+  const userPhone = useAppStore((s) => s.userPhone);
+  const userAvatar = useAppStore((s) => s.userAvatar);
 
   const handleSelect = (roleData: (typeof roles)[number]["mockLogin"], label: string) => {
-    login(roleData.role, roleData.id, roleData.name, roleData.avatar, roleData.phone);
-    toast.success(`Welcome, ${roleData.name}! (${label})`);
+    if (userId && userName) {
+      login(roleData.role, userId, userName, userAvatar || "", userPhone || "");
+      toast.success(`Welcome, ${userName}! (${label})`);
+    } else {
+      login(roleData.role, roleData.id, roleData.name, roleData.avatar, roleData.phone);
+      toast.success(`Welcome, ${roleData.name}! (${label}) (demo mode)`);
+    }
   };
 
   return (

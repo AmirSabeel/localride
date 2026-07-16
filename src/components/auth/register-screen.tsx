@@ -60,6 +60,7 @@ const roles: {
 
 export default function RegisterScreen() {
   const setAuthView = useAppStore((s) => s.setAuthView);
+  const setTempUser = useAppStore((s) => s.setTempUser);
   const login = useAppStore((s) => s.login);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -118,7 +119,7 @@ export default function RegisterScreen() {
       }
 
       const u = data.user;
-      login(selectedRole, u.id, u.name, u.avatar || "", u.phone || phone || "");
+      setTempUser(u.id, u.name, u.avatar || "", u.phone || phone || "", selectedRole);
       setAuthView("otp"); // Navigate to OTP code screen
     } catch (err: any) {
       toast.error(err.message || "Failed to trigger phone verification");
